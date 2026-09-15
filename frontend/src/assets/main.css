@@ -1,0 +1,93 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  background-color: #f0f2f5;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+/* 通用卡片样式 */
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+  padding-left: 10px;
+  border-left: 4px solid #409EFF;
+}
+
+/* 统计卡片 */
+.stat-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-card .stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+}
+
+.stat-card .stat-info .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1.2;
+}
+
+.stat-card .stat-info .stat-label {
+  font-size: 14px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+/* 图表容器 */
+.chart-container {
+  width: 100%;
+  height: 320px;
+}
+
+.chart-container-lg {
+  width: 100%;
+  height: 380px;
+}
