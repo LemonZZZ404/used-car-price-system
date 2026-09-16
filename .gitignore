@@ -50,3 +50,4 @@ used_car_data.csv
 # deploy 下的旧版启停脚本（以根目录新版为准）
 deploy/start_all.sh
 deploy/stop_all.sh
+*.bak
