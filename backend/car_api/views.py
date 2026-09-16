@@ -1,8 +1,12 @@
 """
 视图层 - API接口
-包含：车辆信息CRUD、统计数据接口、价格预测接口、看板概览接口
+包含：车辆信息CRUD、统计数据接口、价格预测接口、看板概览接口、模型分析接口
 """
+import json
 import logging
+import os
+from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Count, Avg, Q
 from django.utils import timezone
 from rest_framework import viewsets, status, filters
@@ -241,7 +245,13 @@ def dashboard_summary(request):
     """
     数据看板概览接口
     返回：车辆总数、品牌数、平均价格、预测次数、最近预测
+    使用 Redis 缓存 60 秒，避免百万级数据频繁聚合查询
     """
+    cache_key = 'dashboard_summary_v1'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response({'code': 200, 'message': 'success (cached)', 'data': cached})
+
     try:
         total_cars = CarInfo.objects.count()
         total_brands = CarInfo.objects.values('brand').distinct().count()
@@ -264,12 +274,62 @@ def dashboard_summary(request):
             'latest_predictions': latest_data,
             'price_distribution': dist_data
         }
+        cache.set(cache_key, data, 60)
         return Response({'code': 200, 'message': 'success', 'data': data})
     except Exception as e:
         logger.error(f"[看板] 获取概览失败: {e}", exc_info=True)
         return Response({
             'code': 500,
             'message': f'获取数据失败: {str(e)}',
+            'data': None
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def model_analysis(request):
+    """
+    模型分析接口
+    返回：Scikit-learn / Spark MLlib 训练指标对比 + 特征重要性
+    数据来源：ml/models/ 下的 JSON 指标文件
+    """
+    try:
+        model_dir = settings.MODEL_DIR
+
+        def _read_json(name):
+            path = os.path.join(model_dir, name)
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return None
+
+        sklearn_metrics = _read_json('sklearn_metrics.json')
+        spark_metrics = _read_json('spark_mllib_metrics.json')
+        feature_importance = _read_json('feature_importance.json')
+
+        if not sklearn_metrics:
+            return Response({
+                'code': 404,
+                'message': '模型指标文件不存在，请先训练模型',
+                'data': None
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 特征重要性只取前12个用于图表展示
+        if feature_importance:
+            feature_importance = feature_importance[:12]
+
+        data = {
+            'sklearn_metrics': sklearn_metrics,
+            'spark_metrics': spark_metrics,
+            'feature_importance': feature_importance,
+            'model_info': model_service.get_model_info(),
+        }
+        return Response({'code': 200, 'message': 'success', 'data': data})
+    except Exception as e:
+        logger.error(f"[模型分析] 获取数据失败: {e}", exc_info=True)
+        return Response({
+            'code': 500,
+            'message': f'获取模型分析数据失败: {str(e)}',
             'data': None
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -18,6 +18,12 @@ const routes = [
     meta: { title: '价格预测' }
   },
   {
+    path: '/model-analysis',
+    name: 'ModelAnalysis',
+    component: () => import('@/views/ModelAnalysis.vue'),
+    meta: { title: '模型分析' }
+  },
+  {
     path: '/cars',
     name: 'CarList',
     component: () => import('@/views/CarList.vue'),

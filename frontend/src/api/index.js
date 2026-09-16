@@ -33,6 +33,9 @@ export const getBrandPriceTop10 = () => request.get('/stat/brand-price/top10/')
 export const getAgePriceChart = () => request.get('/stat/age-price/chart/')
 export const getPriceDistributionChart = () => request.get('/stat/price-distribution/chart/')
 
+// ============ 模型分析接口 ============
+export const getModelAnalysis = () => request.get('/model/analysis/')
+
 // ============ 车辆接口 ============
 export const getCarList = (params) => request.get('/cars/', { params })
 export const getCarBrands = () => request.get('/cars/brands/')

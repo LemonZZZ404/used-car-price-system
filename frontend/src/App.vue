@@ -28,6 +28,10 @@
           <el-icon><MagicStick /></el-icon>
           <template #title>价格预测</template>
         </el-menu-item>
+        <el-menu-item index="/model-analysis">
+          <el-icon><TrendCharts /></el-icon>
+          <template #title>模型分析</template>
+        </el-menu-item>
         <el-menu-item index="/cars">
           <el-icon><List /></el-icon>
           <template #title>车辆列表</template>
