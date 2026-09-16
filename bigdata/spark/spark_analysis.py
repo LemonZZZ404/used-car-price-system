@@ -27,10 +27,13 @@ HIVE_DB = "used_car"
 HIVE_TABLE = "dwd_car_info"
 DT = "20240101"  # 数据分区日期，根据实际修改
 
-# MySQL配置
-MYSQL_URL = "jdbc:mysql://localhost:3306/used_car?useUnicode=true&characterEncoding=utf-8&useSSL=false"
-MYSQL_USER = "root"
-MYSQL_PASSWORD = "123456"
+# MySQL配置（环境变量可覆盖，兼容单机/集群）
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "123456")
+MYSQL_DB = os.getenv("MYSQL_DB", "used_car")
+MYSQL_URL = f"jdbc:mysql://{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?useUnicode=true&characterEncoding=utf-8&useSSL=false"
 MYSQL_PROPERTIES = {
     "user": MYSQL_USER,
     "password": MYSQL_PASSWORD,
@@ -70,8 +73,8 @@ def create_spark():
     spark = (SparkSession.builder
              .appName("UsedCarPriceAnalysis")
              .config("spark.sql.warehouse.dir", "/user/hive/warehouse")
-             .config("spark.driver.memory", "2g")
-             .config("spark.executor.memory", "2g")
+             .config("spark.driver.memory", os.getenv("SPARK_DRIVER_MEMORY", "512m"))
+             .config("spark.executor.memory", os.getenv("SPARK_EXECUTOR_MEMORY", "512m"))
              .config("spark.sql.shuffle.partitions", "10")
              .enableHiveSupport()
              .getOrCreate())

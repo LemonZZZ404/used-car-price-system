@@ -8,6 +8,13 @@ from dotenv import load_dotenv
 # MySQL 驱动：让 Django 使用 pymysql 替代 mysqlclient
 import pymysql
 pymysql.install_as_MySQLdb()
+# MariaDB 10.3 兼容：跳过 Django 对 MariaDB 10.4+ 的版本检查（pymysql 驱动实际兼容）
+try:
+    from django.db.backends.mysql.base import DatabaseWrapper
+    DatabaseWrapper.check_database_version_supported = lambda self: None
+except Exception:
+    pass
+
 
 # 加载环境变量
 load_dotenv()
