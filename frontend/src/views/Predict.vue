@@ -2,7 +2,7 @@
   <div class="predict-page">
     <el-row :gutter="20">
       <!-- 左侧：预测表单 -->
-      <el-col :span="10">
+      <el-col :xs="24" :sm="24" :md="10">
         <div class="card">
           <div class="card-title">车辆信息录入</div>
           <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" size="default">
@@ -14,17 +14,17 @@
 
             <el-form-item label="车龄" prop="age">
               <el-input-number v-model="form.age" :min="0" :max="30" :step="1" style="width:100%" />
-              <span style="margin-left:8px;color:#909399">年</span>
+              <span style="margin-left:8px;color:#9CA3AF">年</span>
             </el-form-item>
 
             <el-form-item label="里程" prop="mileage">
               <el-input-number v-model="form.mileage" :min="0" :max="50" :step="0.5" :precision="1" style="width:100%" />
-              <span style="margin-left:8px;color:#909399">万公里</span>
+              <span style="margin-left:8px;color:#9CA3AF">万公里</span>
             </el-form-item>
 
             <el-form-item label="新车指导价" prop="original_price">
               <el-input-number v-model="form.original_price" :min="0" :max="500" :step="1" :precision="2" style="width:100%" />
-              <span style="margin-left:8px;color:#909399">万元</span>
+              <span style="margin-left:8px;color:#9CA3AF">万元</span>
             </el-form-item>
 
             <el-form-item label="变速箱" prop="gearbox">
@@ -60,7 +60,7 @@
             </el-form-item>
 
             <el-form-item>
-              <el-button type="primary" :icon="MagicStick" :loading="loading" @click="handlePredict" style="width:100%">
+              <el-button type="primary" :icon="MagicStick" :loading="loading" @click="handlePredict" class="predict-btn">
                 开始预测
               </el-button>
             </el-form-item>
@@ -69,17 +69,19 @@
       </el-col>
 
       <!-- 右侧：预测结果 -->
-      <el-col :span="14">
+      <el-col :xs="24" :sm="24" :md="14">
         <div class="card result-card" v-if="result">
           <div class="card-title">预测结果</div>
-          <div class="result-main">
+          <div class="result-hero">
             <div class="result-price">
               <span class="price-label">预测价格</span>
-              <span class="price-value">{{ result.predicted_price }}</span>
-              <span class="price-unit">万元</span>
+              <div class="price-main">
+                <span class="price-value">{{ result.predicted_price }}</span>
+                <span class="price-unit">万元</span>
+              </div>
             </div>
             <div class="result-range">
-              <el-tag type="info" size="large">
+              <el-tag type="info" size="large" effect="plain" round>
                 合理区间：{{ result.price_range?.min }} ~ {{ result.price_range?.max }} 万元
               </el-tag>
             </div>
@@ -101,10 +103,10 @@
           <el-divider />
 
           <div class="result-meta">
-            <el-tag :type="result.model_type === 'sklearn' ? 'success' : 'warning'">
+            <el-tag :type="result.model_type === 'sklearn' ? 'success' : 'warning'" effect="light" round>
               模型：{{ result.model_type === 'sklearn' ? 'Scikit-learn 随机森林' : 'Spark MLlib 随机森林' }}
             </el-tag>
-            <el-tag type="primary">置信度：{{ (result.confidence * 100).toFixed(0) }}%</el-tag>
+            <el-tag type="primary" effect="light" round>置信度：{{ (result.confidence * 100).toFixed(0) }}%</el-tag>
           </div>
         </div>
 
@@ -112,7 +114,9 @@
         <div class="card placeholder-card" v-else>
           <el-empty description="请在左侧填写车辆信息，点击开始预测">
             <template #image>
-              <el-icon :size="80" color="#c0c4cc"><DataAnalysis /></el-icon>
+              <div class="placeholder-icon">
+                <el-icon :size="60" color="#9CA3AF"><DataAnalysis /></el-icon>
+              </div>
             </template>
           </el-empty>
         </div>
@@ -122,7 +126,8 @@
           <div class="card-title">模型信息</div>
           <el-descriptions :column="2" border size="small">
             <el-descriptions-item label="模型状态">
-              <el-tag :type="modelInfo.model_loaded ? 'success' : 'danger'">
+              <el-tag :type="modelInfo.model_loaded ? 'success' : 'danger'" effect="light">
+                <el-icon v-if="modelInfo.model_loaded" style="margin-right:4px"><CircleCheckFilled /></el-icon>
                 {{ modelInfo.model_loaded ? '已加载' : '未加载(使用兜底)' }}
               </el-tag>
             </el-descriptions-item>
@@ -139,7 +144,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { MagicStick, DataAnalysis } from '@element-plus/icons-vue'
+import { MagicStick, DataAnalysis, CircleCheckFilled } from '@element-plus/icons-vue'
 import { predictPrice, getCarBrands, getCarCities, getModelInfo } from '@/api'
 
 const formRef = ref(null)
@@ -229,30 +234,61 @@ onMounted(() => {
 <style scoped>
 .predict-page { padding: 0; }
 
+.predict-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 15px;
+  letter-spacing: 2px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #2D6BFF, #5B8CFF);
+  border: none;
+  box-shadow: 0 4px 12px rgba(45, 107, 255, 0.35);
+}
+
+.predict-btn:hover {
+  background: linear-gradient(90deg, #1B4FD8, #4A7DFF);
+}
+
 .result-card { min-height: 400px; }
 
-.result-main { text-align: center; padding: 20px 0; }
+.result-hero {
+  text-align: center;
+  padding: 28px 0 16px;
+  background: linear-gradient(180deg, #F0F6FF 0%, #FFFFFF 100%);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
 
 .result-price { margin-bottom: 16px; }
 
 .price-label {
   display: block;
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 8px;
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 10px;
+  letter-spacing: 4px;
+}
+
+.price-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
 }
 
 .price-value {
-  font-size: 56px;
-  font-weight: 700;
-  color: #F56C6C;
-  line-height: 1;
+  font-size: 60px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #2D6BFF, #5B8CFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
 }
 
 .price-unit {
-  font-size: 20px;
-  color: #F56C6C;
-  margin-left: 4px;
+  font-size: 18px;
+  color: #6B7280;
+  margin-left: 6px;
 }
 
 .result-range { margin-top: 12px; }
@@ -261,10 +297,21 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .placeholder-card {
   min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon {
+  width: 110px;
+  height: 110px;
+  border-radius: 20px;
+  background: #F7F9FC;
   display: flex;
   align-items: center;
   justify-content: center;

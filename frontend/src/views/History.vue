@@ -1,27 +1,38 @@
 <template>
   <div class="history-page">
     <div class="card">
-      <div class="card-title">预测历史记录（共 {{ total }} 条）</div>
+      <div class="card-title">
+        <span>预测历史记录</span>
+        <el-tag type="primary" effect="light" round>共 {{ total }} 条</el-tag>
+      </div>
       <el-table :data="tableData" v-loading="loading" stripe border size="default">
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="brand" label="品牌" width="80" />
+        <el-table-column prop="brand" label="品牌" width="90">
+          <template #default="{ row }">
+            <el-tag type="primary" effect="plain" size="small">{{ row.brand }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="age" label="车龄" width="70">
           <template #default="{ row }">{{ row.age }}年</template>
         </el-table-column>
         <el-table-column prop="mileage" label="里程(万)" width="90" />
-        <el-table-column prop="gearbox" label="变速箱" width="80" />
-        <el-table-column prop="fuel_type" label="燃油类型" width="90" />
+        <el-table-column prop="gearbox" label="变速箱" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.gearbox === '自动' ? 'success' : 'info'" effect="plain" size="small">{{ row.gearbox }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="fuel_type" label="燃油类型" width="95" />
         <el-table-column prop="displacement" label="排量" width="80" />
         <el-table-column prop="city" label="城市" width="80" />
         <el-table-column prop="original_price" label="新车价(万)" width="100" />
         <el-table-column prop="predicted_price" label="预测价格(万)" width="120" sortable>
           <template #default="{ row }">
-            <span style="color:#F56C6C;font-weight:600">{{ row.predicted_price }}</span>
+            <span style="color:#EF4444;font-weight:600">{{ row.predicted_price }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="model_type" label="模型" width="120">
+        <el-table-column prop="model_type" label="模型" width="130">
           <template #default="{ row }">
-            <el-tag :type="row.model_type === 'sklearn' ? 'success' : 'warning'" size="small">
+            <el-tag :type="row.model_type === 'sklearn' ? 'success' : 'warning'" size="small" effect="light" round>
               {{ row.model_type === 'sklearn' ? 'Scikit-learn' : row.model_type }}
             </el-tag>
           </template>
@@ -29,7 +40,9 @@
         <el-table-column prop="create_time" label="预测时间" min-width="160" />
       </el-table>
 
-      <div class="pagination">
+      <el-empty v-if="!loading && tableData.length === 0" description="暂无预测记录" />
+
+      <div class="pagination" v-if="total > 0">
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
@@ -40,8 +53,6 @@
           @current-change="loadData"
         />
       </div>
-
-      <el-empty v-if="!loading && tableData.length === 0" description="暂无预测记录" />
     </div>
   </div>
 </template>
