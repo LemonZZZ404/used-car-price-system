@@ -1,5 +1,63 @@
 <template>
   <div class="model-analysis">
+    <!-- 模型重训控制台 -->
+    <div class="card train-console">
+      <div class="card-title" style="margin-bottom:14px">
+        <span>模型重训控制台</span>
+        <el-tag type="warning" effect="light" size="small" round>Celery 异步任务</el-tag>
+      </div>
+      <div class="train-body">
+        <div class="train-left">
+          <el-button
+            type="primary"
+            size="large"
+            :loading="trainState.status === 'running'"
+            :disabled="trainState.status === 'running'"
+            @click="handleTrain"
+            style="background: linear-gradient(90deg, #F59E0B, #FBBF24); border:none; color:#fff"
+          >
+            <el-icon style="margin-right:6px"><Refresh /></el-icon>
+            {{ trainState.status === 'running' ? '训练中...' : '一键重训模型' }}
+          </el-button>
+          <span class="train-hint">基于 {{ (sklearn.train_size ? Number(sklearn.train_size).toLocaleString() : '—') }} 条样本，异步执行全量重训（约 1 分钟）</span>
+        </div>
+        <div class="train-progress" v-if="trainState.status === 'running' || (trainState.status === 'success' && trainState.progress > 0)">
+          <div class="train-progress-head">
+            <span class="train-msg">{{ trainState.message || '准备中...' }}</span>
+            <span class="train-pct">{{ trainState.progress || 0 }}%</span>
+          </div>
+          <el-progress
+            :percentage="trainState.progress || 0"
+            :stroke-width="10"
+            :color="trainState.status === 'error' ? '#EF4444' : 'linear-gradient(90deg, #F59E0B, #FBBF24)'"
+            :status="trainState.status === 'error' ? 'exception' : (trainState.status === 'success' ? 'success' : '')"
+          />
+        </div>
+        <el-alert
+          v-if="trainState.status === 'success' && trainState.metrics && trainState.metrics.r2"
+          type="success"
+          :closable="false"
+          style="margin-top:14px"
+          show-icon
+        >
+          <template #title>
+            <div class="train-success">
+              <span>训练完成：R² = {{ trainState.metrics.r2 }}，RMSE = {{ trainState.metrics.rmse }} 万</span>
+              <span class="train-success-time">（{{ trainState.updated_at }}）</span>
+            </div>
+          </template>
+        </el-alert>
+        <el-alert
+          v-if="trainState.status === 'error'"
+          type="error"
+          :closable="false"
+          style="margin-top:14px"
+          show-icon
+          :title="trainState.message"
+        />
+      </div>
+    </div>
+
     <!-- 模型对比指标卡片 -->
     <el-row :gutter="20" class="metric-row">
       <el-col :xs="24" :sm="12" :md="6">
@@ -96,8 +154,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { Odometer, TrendCharts, Aim, Cpu } from '@element-plus/icons-vue'
-import { getModelAnalysis } from '@/api'
+import { ElMessage } from 'element-plus'
+import { Odometer, TrendCharts, Aim, Cpu, Refresh } from '@element-plus/icons-vue'
+import { getModelAnalysis, trainStart, trainStatus } from '@/api'
 
 const loading = ref(false)
 const data = ref({})
@@ -105,6 +164,8 @@ const importanceChartRef = ref(null)
 const compareChartRef = ref(null)
 let importanceChart = null
 let compareChart = null
+let trainPollTimer = null
+const trainState = ref({ status: 'idle', progress: 0, message: '', metrics: {} })
 
 const sklearn = computed(() => data.value.sklearn_metrics || {})
 const spark = computed(() => data.value.spark_metrics || {})
@@ -151,6 +212,46 @@ const formatMetric = (v) => {
 const initCharts = () => {
   if (importanceChartRef.value) importanceChart = echarts.init(importanceChartRef.value)
   if (compareChartRef.value) compareChart = echarts.init(compareChartRef.value)
+}
+
+const handleTrain = async () => {
+  try {
+    const res = await trainStart()
+    if (res.code === 200) {
+      ElMessage.success('训练任务已提交，正在后台异步执行')
+      pollTrainStatus()
+    } else {
+      ElMessage.warning(res.message || '训练任务启动失败')
+      // 已在训练中则也开启轮询看进度
+      if (res.code === 400) pollTrainStatus()
+    }
+  } catch (e) {
+    ElMessage.error('提交训练任务失败，请确认后端与 Celery 服务正常')
+  }
+}
+
+const pollTrainStatus = async () => {
+  clearInterval(trainPollTimer)
+  trainPollTimer = setInterval(async () => {
+    try {
+      const res = await trainStatus()
+      if (res.code === 200) {
+        trainState.value = res.data
+        if (res.data.status === 'success' || res.data.status === 'error') {
+          clearInterval(trainPollTimer)
+          if (res.data.status === 'success') {
+            ElMessage.success('模型训练完成！')
+            // 刷新指标数据
+            await loadData()
+          } else {
+            ElMessage.error('模型训练失败')
+          }
+        }
+      }
+    } catch (e) {
+      clearInterval(trainPollTimer)
+    }
+  }, 3000)
 }
 
 const loadData = async () => {
@@ -276,10 +377,17 @@ onMounted(async () => {
   await nextTick()
   initCharts()
   loadData()
+  // 初始化训练状态（若上次训练中断，可恢复进度显示）
+  try {
+    const res = await trainStatus()
+    if (res.code === 200) trainState.value = res.data
+    if (res.data.status === 'running') pollTrainStatus()
+  } catch (e) { /* 忽略 */ }
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
+  clearInterval(trainPollTimer)
   window.removeEventListener('resize', handleResize)
   importanceChart?.dispose()
   compareChart?.dispose()
@@ -293,5 +401,60 @@ onUnmounted(() => {
   font-size: 14px;
   color: var(--text-secondary);
   margin-left: 4px;
+}
+
+.train-console {
+  margin-bottom: 20px;
+  background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 60%);
+  border: 1px solid #FDE68A;
+}
+
+.train-body { padding: 4px 2px; }
+
+.train-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.train-hint {
+  font-size: 13px;
+  color: #9CA3AF;
+}
+
+.train-progress {
+  margin-top: 16px;
+}
+
+.train-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.train-msg {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.train-pct {
+  font-size: 13px;
+  font-weight: 600;
+  color: #F59E0B;
+}
+
+.train-success {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.train-success-time {
+  font-weight: 400;
+  color: #9CA3AF;
+  font-size: 12px;
 }
 </style>

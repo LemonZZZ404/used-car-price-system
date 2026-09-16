@@ -36,6 +36,10 @@ export const getPriceDistributionChart = () => request.get('/stat/price-distribu
 // ============ 模型分析接口 ============
 export const getModelAnalysis = () => request.get('/model/analysis/')
 
+// ============ 模型训练（Celery 异步） ============
+export const trainStart = () => request.post('/train/start/')
+export const trainStatus = () => request.get('/train/status/')
+
 // ============ 车辆接口 ============
 export const getCarList = (params) => request.get('/cars/', { params })
 export const getCarBrands = () => request.get('/cars/brands/')

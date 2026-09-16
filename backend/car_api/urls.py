@@ -6,7 +6,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CarInfoViewSet, StatBrandPriceViewSet, StatAgePriceViewSet,
     StatPriceDistributionViewSet, PredictionViewSet,
-    dashboard_summary, model_analysis, health_check
+    dashboard_summary, model_analysis, train_start, train_status, health_check
 )
 
 router = DefaultRouter()
@@ -25,6 +25,10 @@ urlpatterns = [
 
     # 模型分析（特征重要性 + 指标对比）
     path('model/analysis/', model_analysis, name='model-analysis'),
+
+    # 模型训练（Celery 异步）
+    path('train/start/', train_start, name='train-start'),
+    path('train/status/', train_status, name='train-status'),
 
     # 健康检查
     path('health/', health_check, name='health-check'),

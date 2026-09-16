@@ -21,6 +21,8 @@ class ModelService:
     _instance = None
     _model = None
     _model_loaded = False
+    _explainer = None
+    _preprocessor = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -129,11 +131,15 @@ class ModelService:
             'unit': '万元'
         }
 
+        # 5.1 SHAP 影响因子解释（哪些特征推高/拉低了价格）
+        explain = self._explain_prediction(model, X)
+
         result = {
             'predicted_price': predicted_price,
             'model_type': model_type,
             'confidence': confidence,
             'price_range': price_range,
+            'explain': explain,
             'input_params': params
         }
 
@@ -148,6 +154,73 @@ class ModelService:
                     f"(模型: {model_type})")
 
         return result
+
+    def _explain_prediction(self, model, X):
+        """
+        SHAP 特征影响因子解释
+        返回: [{feature, label, impact, direction}]，按影响绝对值降序
+        """
+        try:
+            if model is None or not hasattr(model, 'named_steps'):
+                return None
+            if self._explainer is None:
+                import shap
+                regressor = model.named_steps.get('regressor')
+                preprocessor = model.named_steps.get('preprocessor')
+                if regressor is None or preprocessor is None:
+                    return None
+                # 基于树的解释器，不需要背景数据（tree_path_dependent）
+                self._explainer = shap.TreeExplainer(
+                    regressor,
+                    feature_perturbation='tree_path_dependent'
+                )
+                self._preprocessor = preprocessor
+            if self._explainer is None:
+                return None
+
+            Xt = self._preprocessor.transform(X)
+            shap_values = self._explainer.shap_values(Xt)[0]
+
+            # 特征名：数值3列 + 类别one-hot列
+            num_names = ['age', 'mileage', 'original_price']
+            cat_encoder = self._preprocessor.named_transformers_['cat'].named_steps['onehot']
+            cat_names = list(cat_encoder.get_feature_names_out(
+                ['brand', 'gearbox', 'fuel_type', 'displacement', 'city']
+            ))
+            names = num_names + cat_names
+
+            # 归并到原始字段（one-hot 的多个列合并到所属字段）
+            label_map = {
+                'age': '车龄', 'mileage': '行驶里程', 'original_price': '新车价格',
+                'brand': '品牌', 'gearbox': '变速箱', 'fuel_type': '燃油类型',
+                'displacement': '排量', 'city': '城市'
+            }
+            raw_fields = list(label_map.keys())
+            impacts = {f: 0.0 for f in raw_fields}
+            for name, v in zip(names, shap_values):
+                if name in impacts:
+                    impacts[name] = float(v)
+                else:
+                    prefix = name.split('_')[0]
+                    if prefix in impacts:
+                        impacts[prefix] += float(v)
+
+            # 过滤影响过小的特征，按绝对值降序
+            explain = []
+            for f in raw_fields:
+                v = impacts[f]
+                if abs(v) >= 0.05:
+                    explain.append({
+                        'feature': f,
+                        'label': label_map[f],
+                        'impact': round(v, 2),
+                        'direction': 'up' if v > 0 else 'down'
+                    })
+            explain.sort(key=lambda x: abs(x['impact']), reverse=True)
+            return explain
+        except Exception as e:
+            logger.warning(f"[ModelService] SHAP 解释失败: {e}")
+            return None
 
     def _fallback_predict(self, params):
         """

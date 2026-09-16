@@ -334,6 +334,77 @@ def model_analysis(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def train_start(request):
+    """
+    触发异步模型重训（Celery 任务）
+    返回：任务是否已提交
+    """
+    from .tasks import run_training_task
+    status_file = os.path.join(settings.BASE_DIR.parent, 'ml', 'models', 'train_status.json')
+    # 检查是否已有任务在跑
+    if os.path.exists(status_file):
+        try:
+            with open(status_file, 'r', encoding='utf-8') as f:
+                st = json.load(f)
+            if st.get('status') == 'running':
+                return Response({
+                    'code': 400,
+                    'message': '已有训练任务正在执行中，请稍候',
+                    'data': st
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            pass
+
+    try:
+        result = run_training_task.delay()
+        return Response({
+            'code': 200,
+            'message': '训练任务已提交，正在后台异步执行',
+            'data': {'task_id': result.id, 'status': 'submitted'}
+        })
+    except Exception as e:
+        logger.error(f"[训练] 提交任务失败: {e}", exc_info=True)
+        return Response({
+            'code': 500,
+            'message': f'提交训练任务失败: {str(e)}（请确认 Celery Worker 已启动）',
+            'data': None
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def train_status(request):
+    """
+    查询训练任务状态
+    返回：status( idle/running/success/error )、progress(0-100)、metrics
+    """
+    status_file = os.path.join(settings.BASE_DIR.parent, 'ml', 'models', 'train_status.json')
+    if not os.path.exists(status_file):
+        return Response({
+            'code': 200,
+            'message': 'success',
+            'data': {
+                'status': 'idle',
+                'progress': 0,
+                'message': '暂无训练记录，可点击"开始训练"触发模型重训',
+                'metrics': {},
+                'updated_at': None
+            }
+        })
+    try:
+        with open(status_file, 'r', encoding='utf-8') as f:
+            st = json.load(f)
+        return Response({'code': 200, 'message': 'success', 'data': st})
+    except Exception as e:
+        return Response({
+            'code': 500,
+            'message': f'读取训练状态失败: {str(e)}',
+            'data': None
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):

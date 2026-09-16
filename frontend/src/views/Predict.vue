@@ -102,6 +102,38 @@
 
           <el-divider />
 
+          <!-- SHAP 影响因子 -->
+          <div class="explain-block" v-if="result.explain && result.explain.length">
+            <div class="explain-title">
+              <span>价格影响因子（SHAP 可解释性）</span>
+              <el-tag size="small" type="info" effect="plain" round>模型归因分析</el-tag>
+            </div>
+            <div class="explain-list">
+              <div v-for="item in result.explain" :key="item.feature" class="explain-item">
+                <div class="explain-label">{{ item.label }}</div>
+                <div class="explain-bar">
+                  <div
+                    class="explain-fill"
+                    :class="item.direction === 'up' ? 'fill-up' : 'fill-down'"
+                    :style="{ width: explainWidth(item.impact, result.explain) + '%' }"
+                  ></div>
+                </div>
+                <div class="explain-impact" :class="item.direction === 'up' ? 'impact-up' : 'impact-down'">
+                  {{ item.impact > 0 ? '+' : '' }}{{ item.impact }} 万
+                </div>
+                <el-tag :type="item.direction === 'up' ? 'success' : 'danger'" size="small" effect="light" round>
+                  {{ item.direction === 'up' ? '推高' : '拉低' }}
+                </el-tag>
+              </div>
+            </div>
+            <div class="explain-note">
+              <el-icon><InfoFilled /></el-icon>
+              <span>基于 SHAP 值解释：绿色代表推高价格，红色代表拉低价格</span>
+            </div>
+          </div>
+
+          <el-divider />
+
           <div class="result-meta">
             <el-tag :type="result.model_type === 'sklearn' ? 'success' : 'warning'" effect="light" round>
               模型：{{ result.model_type === 'sklearn' ? 'Scikit-learn 随机森林' : 'Spark MLlib 随机森林' }}
@@ -144,7 +176,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { MagicStick, DataAnalysis, CircleCheckFilled } from '@element-plus/icons-vue'
+import { MagicStick, DataAnalysis, CircleCheckFilled, InfoFilled } from '@element-plus/icons-vue'
 import { predictPrice, getCarBrands, getCarCities, getModelInfo } from '@/api'
 
 const formRef = ref(null)
@@ -200,6 +232,11 @@ const loadModelInfo = async () => {
   } catch (e) {
     modelInfo.value = { model_loaded: false, model_type: 'fallback' }
   }
+}
+
+const explainWidth = (impact, list) => {
+  const max = Math.max(...list.map(i => Math.abs(i.impact)), 0.1)
+  return Math.max((Math.abs(impact) / max) * 100, 4)
 }
 
 const handlePredict = async () => {
@@ -298,6 +335,82 @@ onMounted(() => {
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.explain-block {
+  padding: 4px 2px;
+}
+
+.explain-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+
+.explain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.explain-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.explain-label {
+  width: 88px;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.explain-bar {
+  flex: 1;
+  height: 10px;
+  background: #F3F4F6;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.explain-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+
+.fill-up {
+  background: linear-gradient(90deg, #22C55E, #4ADE80);
+}
+
+.fill-down {
+  background: linear-gradient(90deg, #EF4444, #F87171);
+}
+
+.explain-impact {
+  width: 72px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.impact-up { color: #16A34A; }
+.impact-down { color: #DC2626; }
+
+.explain-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #9CA3AF;
 }
 
 .placeholder-card {

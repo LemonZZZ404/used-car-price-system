@@ -5,6 +5,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+# MySQL 驱动：让 Django 使用 pymysql 替代 mysqlclient
+import pymysql
+pymysql.install_as_MySQLdb()
+
 # 加载环境变量
 load_dotenv()
 
@@ -115,6 +119,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
+# Celery 异步任务配置（模型训练）
+CELERY_BROKER_URL = f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/1"
+CELERY_RESULT_BACKEND = f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/1"
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Shanghai'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 3600  # 训练任务最长1小时
 
 # Internationalization
 LANGUAGE_CODE = 'zh-hans'
