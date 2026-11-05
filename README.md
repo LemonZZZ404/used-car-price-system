@@ -200,12 +200,6 @@ cd frontend && npm install && npm run build
 
 详见 [deploy/CLUSTER_DEPLOY.md](deploy/CLUSTER_DEPLOY.md)。
 
-## 作者
-
-- 姓名：刘明哲
-- 专业：大数据
-- 项目：二手车价格评估系统设计与实现（三机集群版）
-
 ## License
 
 MIT
