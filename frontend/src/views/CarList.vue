@@ -1,6 +1,5 @@
 <template>
   <div class="car-list-page">
-    <!-- 搜索筛选区 -->
     <div class="card filter-card">
       <el-form :inline="true" :model="filterForm" size="default">
         <el-form-item label="品牌">
@@ -32,11 +31,11 @@
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+          <el-button type="success" :icon="Download" @click="handleExport" :loading="exporting">导出 Excel</el-button>
         </el-form-item>
       </el-form>
     </div>
 
-    <!-- 车辆列表 -->
     <div class="card" style="margin-top:20px">
       <div class="card-title">
         <span>车辆列表</span>
@@ -45,32 +44,29 @@
       <el-table :data="tableData" v-loading="loading" stripe border size="default">
         <el-table-column prop="car_id" label="车辆编号" width="130" />
         <el-table-column prop="brand" label="品牌" width="90">
-          <template #default="{ row }">
-            <el-tag type="primary" effect="plain" size="small">{{ row.brand }}</el-tag>
-          </template>
+          <template #default="{ row }"><el-tag type="primary" effect="plain" size="small">{{ row.brand }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="series" label="车系" width="100" />
         <el-table-column prop="model" label="车型" min-width="180" show-overflow-tooltip />
         <el-table-column prop="price" label="售价(万)" width="100" sortable>
-          <template #default="{ row }">
-            <span class="price-text">{{ row.price }}</span>
-          </template>
+          <template #default="{ row }"><span class="price-text">{{ row.price }}</span></template>
         </el-table-column>
         <el-table-column prop="age" label="车龄" width="70">
           <template #default="{ row }">{{ row.age }}年</template>
         </el-table-column>
         <el-table-column prop="mileage" label="里程(万)" width="90" />
         <el-table-column prop="gearbox" label="变速箱" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.gearbox === '自动' ? 'success' : 'info'" effect="plain" size="small">{{ row.gearbox }}</el-tag>
-          </template>
+          <template #default="{ row }"><el-tag :type="row.gearbox === '自动' ? 'success' : 'info'" effect="plain" size="small">{{ row.gearbox }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="fuel_type" label="燃油类型" width="95">
-          <template #default="{ row }">
-            <el-tag :type="fuelTagType(row.fuel_type)" effect="plain" size="small">{{ row.fuel_type }}</el-tag>
-          </template>
+          <template #default="{ row }"><el-tag :type="fuelTagType(row.fuel_type)" effect="plain" size="small">{{ row.fuel_type }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="city" label="城市" width="90" />
+        <el-table-column label="操作" width="90" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click.stop="goDetail(row)">详情</el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <el-empty v-if="!loading && tableData.length === 0" description="没有符合条件的数据" />
@@ -92,10 +88,15 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
 import { getCarList, getCarBrands } from '@/api'
 
+const router = useRouter()
+
 const loading = ref(false)
+const exporting = ref(false)
 const tableData = ref([])
 const total = ref(0)
 const page = ref(1)
@@ -104,19 +105,11 @@ const brands = ref([])
 const fuelTypes = ['汽油', '柴油', '纯电动', '混合动力', '插电混动']
 
 const filterForm = reactive({
-  brand: '',
-  min_price: null,
-  max_price: null,
-  min_age: null,
-  max_age: null,
-  gearbox: '',
-  fuel_type: ''
+  brand: '', min_price: null, max_price: null,
+  min_age: null, max_age: null, gearbox: '', fuel_type: ''
 })
 
-const formatNumber = (n) => {
-  if (n === undefined || n === null) return 0
-  return Number(n).toLocaleString('zh-CN')
-}
+const formatNumber = (n) => n ? Number(n).toLocaleString('zh-CN') : 0
 
 const fuelTagType = (fuel) => {
   if (fuel === '纯电动') return 'success'
@@ -128,15 +121,8 @@ const fuelTagType = (fuel) => {
 const loadData = async () => {
   loading.value = true
   try {
-    const params = {
-      page: page.value,
-      page_size: pageSize.value,
-      ...filterForm
-    }
-    // 清理空值
-    Object.keys(params).forEach(k => {
-      if (params[k] === '' || params[k] === null || params[k] === undefined) delete params[k]
-    })
+    const params = { page: page.value, page_size: pageSize.value, ...filterForm }
+    Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === null || params[k] === undefined) delete params[k] })
     const res = await getCarList(params)
     tableData.value = res.results || res.data || []
     total.value = res.count || 0
@@ -156,36 +142,47 @@ const loadBrands = async () => {
   }
 }
 
-const handleSearch = () => {
-  page.value = 1
-  loadData()
-}
+const handleSearch = () => { page.value = 1; loadData() }
+
+const goDetail = (row) => router.push(`/car/${row.id}`)
 
 const handleReset = () => {
-  Object.assign(filterForm, {
-    brand: '', min_price: null, max_price: null,
-    min_age: null, max_age: null, gearbox: '', fuel_type: ''
-  })
-  page.value = 1
-  loadData()
+  Object.assign(filterForm, { brand: '', min_price: null, max_price: null, min_age: null, max_age: null, gearbox: '', fuel_type: '' })
+  page.value = 1; loadData()
 }
 
-onMounted(() => {
-  loadBrands()
-  loadData()
-})
+const handleExport = () => {
+  if (!tableData.value.length) {
+    ElMessage.warning('没有可导出的数据')
+    return
+  }
+  exporting.value = true
+  try {
+    const headers = ['车辆编号', '品牌', '车系', '车型', '售价(万)', '车龄', '里程(万)', '变速箱', '燃油类型', '城市']
+    const keys = ['car_id', 'brand', 'series', 'model', 'price', 'age', 'mileage', 'gearbox', 'fuel_type', 'city']
+    const rows = tableData.value.map(item => keys.map(k => item[k] ?? '').join('\t'))
+    const csv = [headers.join('\t'), ...rows].join('\n')
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `车辆列表_${new Date().toLocaleDateString('zh-CN')}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success(`已导出 ${tableData.value.length} 条数据`)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
+onMounted(() => { loadBrands(); loadData() })
 </script>
 
 <style scoped>
 .filter-card { margin-bottom: 0; }
 .pagination { margin-top: 20px; display: flex; justify-content: flex-end; }
-
-.price-text {
-  color: #EF4444;
-  font-weight: 600;
-}
-
-:deep(.el-table .cell) {
-  padding: 0 10px;
-}
+.price-text { color: #EF4444; font-weight: 600; }
+:deep(.el-table .cell) { padding: 0 10px; }
 </style>

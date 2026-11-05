@@ -26,7 +26,6 @@ request.interceptors.response.use(
   response => response.data,
   error => {
     const status = error.response?.status
-    // 401/403 且非登录接口：跳转登录
     if ((status === 401 || status === 403) && !error.config?.url?.includes('/auth/')) {
       localStorage.removeItem('used_car_token')
       localStorage.removeItem('used_car_user')
@@ -67,13 +66,55 @@ export const getCarList = (params) => request.get('/cars/', { params })
 export const getCarBrands = () => request.get('/cars/brands/')
 export const getCarCities = () => request.get('/cars/cities/')
 export const searchCars = (params) => request.get('/cars/search/', { params })
+export const getCarDetail = (id) => request.get(`/cars/${id}/car_detail/`)
+// 数组参数手动拼接为 series=a&series=b，避免 axios 默认的 series[]=a 格式后端解析不到
+export const getTrendCompare = (params) => {
+  const list = Array.isArray(params?.series) ? params.series : (params?.series ? [params.series] : [])
+  const qs = list.filter(Boolean).map(s => `series=${encodeURIComponent(s)}`).join('&')
+  return request.get('/cars/trend_compare/' + (qs ? `?${qs}` : ''))
+}
+
+// ============ 导出中心（CSV 流式下载，走 window.open 无需 Token） ============
+export const exportCsvUrl = '/api/export/csv/'
+
+// ============ 运维日志（管理员） ============
+export const getAdminLogs = (params) => request.get('/admin/logs/', { params })
 
 // ============ 预测接口 ============
 export const predictPrice = (data) => request.post('/prediction/predict/', data)
 export const getPredictionHistory = (params) => request.get('/prediction/history/', { params })
 export const getModelInfo = () => request.get('/prediction/model-info/')
+export const getRetentionCurve = (data) => request.post('/prediction/retention/', data)
+export const getSimilarCars = (params) => request.get('/cars/similar/', { params })
+export const recommendCars = (data) => request.post('/cars/recommend/', data)
+
+// ============ 实时数据接口（Kafka 流处理） ============
+export const getRealtimeHot = () => request.get('/realtime/hot/')
+export const getRealtimeAlerts = (params) => request.get('/realtime/alerts/', { params })
+
+// ============ 排行榜 / 市场行情 / 车型库 / 月报 ============
+export const getRanking = () => request.get('/cars/ranking/')
+export const getMarketOverview = () => request.get('/cars/market/')
+export const getSeriesList = (params) => request.get('/cars/series/', { params })
+export const getSeriesDetail = (params) => request.get('/cars/series_detail/', { params })
+export const getMonthlyTrend = () => request.get('/cars/monthly/')
+
+// ============ 用户管理（管理员） ============
+export const getUserList = () => request.get('/users/')
+export const toggleUserActive = (id) => request.post(`/users/${id}/toggle_active/`)
+export const toggleUserStaff = (id) => request.post(`/users/${id}/toggle_staff/`)
+
+// ============ 批量预测接口（Celery 异步） ============
+export const batchPredict = (data) => request.post('/prediction/batch/', data)
+export const getBatchPredictStatus = (params) => request.get('/prediction/batch/status/', { params })
 
 // ============ 健康检查 ============
 export const healthCheck = () => request.get('/health/')
+export const systemHealth = () => request.get('/system/health/')
+export const vizProvinceHeatmap = () => request.get('/viz/province-heatmap/')
+export const vizBrandHierarchy = () => request.get('/viz/brand-hierarchy/')
+export const vizPriceTrend = () => request.get('/viz/price-trend/')
+export const vizBrandRadar = () => request.get('/viz/brand-radar/')
+export const vizPriceScatter = () => request.get('/viz/price-scatter/')
 
 export default request

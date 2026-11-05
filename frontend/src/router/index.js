@@ -24,6 +24,78 @@ const routes = [
     meta: { title: '价格预测' }
   },
   {
+    path: '/compare',
+    name: 'Compare',
+    component: () => import('@/views/Compare.vue'),
+    meta: { title: '多车对比' }
+  },
+  {
+    path: '/recommend',
+    name: 'Recommend',
+    component: () => import('@/views/Recommend.vue'),
+    meta: { title: '智能选车' }
+  },
+  {
+    path: '/realtime',
+    name: 'RealTimeMonitor',
+    component: () => import('@/views/RealTimeMonitor.vue'),
+    meta: { title: '实时监控' }
+  },
+  {
+    path: '/ranking',
+    name: 'Ranking',
+    component: () => import('@/views/Ranking.vue'),
+    meta: { title: '排行榜中心' }
+  },
+  {
+    path: '/market',
+    name: 'Market',
+    component: () => import('@/views/Market.vue'),
+    meta: { title: '市场行情' }
+  },
+  {
+    path: '/models',
+    name: 'ModelLibrary',
+    component: () => import('@/views/ModelLibrary.vue'),
+    meta: { title: '车型库' }
+  },
+  {
+    path: '/models/:series',
+    name: 'SeriesDetail',
+    component: () => import('@/views/SeriesDetail.vue'),
+    meta: { title: '车系详情' }
+  },
+  {
+    path: '/trend',
+    name: 'Trend',
+    component: () => import('@/views/Trend.vue'),
+    meta: { title: '行情月报' }
+  },
+  {
+    path: '/alerts',
+    name: 'Alerts',
+    component: () => import('@/views/Alerts.vue'),
+    meta: { title: '预警中心' }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/Profile.vue'),
+    meta: { title: '个人中心' }
+  },
+  {
+    path: '/help',
+    name: 'Help',
+    component: () => import('@/views/Help.vue'),
+    meta: { title: '帮助中心' }
+  },
+  {
+    path: '/users',
+    name: 'Users',
+    component: () => import('@/views/Users.vue'),
+    meta: { title: '用户管理', adminOnly: true }
+  },
+  {
     path: '/model-analysis',
     name: 'ModelAnalysis',
     component: () => import('@/views/ModelAnalysis.vue'),
@@ -36,10 +108,58 @@ const routes = [
     meta: { title: '车辆列表' }
   },
   {
+    path: '/car/:id',
+    name: 'CarDetail',
+    component: () => import('@/views/CarDetail.vue'),
+    meta: { title: '车辆详情' }
+  },
+  {
+    path: '/simulator',
+    name: 'Simulator',
+    component: () => import('@/views/Simulator.vue'),
+    meta: { title: '价格试算器' }
+  },
+  {
+    path: '/trend-compare',
+    name: 'TrendCompare',
+    component: () => import('@/views/TrendCompare.vue'),
+    meta: { title: '走势对比' }
+  },
+  {
+    path: '/export',
+    name: 'ExportCenter',
+    component: () => import('@/views/ExportCenter.vue'),
+    meta: { title: '导出中心' }
+  },
+  {
+    path: '/data-dict',
+    name: 'DataDict',
+    component: () => import('@/views/DataDict.vue'),
+    meta: { title: '数据字典' }
+  },
+  {
+    path: '/logs',
+    name: 'Logs',
+    component: () => import('@/views/Logs.vue'),
+    meta: { title: '运维日志', adminOnly: true }
+  },
+  {
     path: '/history',
     name: 'History',
     component: () => import('@/views/History.vue'),
     meta: { title: '预测历史' }
+  },
+  {
+    path: '/datamap',
+    name: 'DataMap',
+    component: () => import('@/views/DataMap.vue'),
+    meta: { title: '数据地图' }
+  },
+  {
+    path: '/brand-graph',
+    name: 'BrandGraph',
+    component: () => import('@/views/BrandGraph.vue'),
+    meta: { title: '品牌图谱' }
   },
   {
     path: '/lineage',
@@ -66,24 +186,20 @@ const router = createRouter({
   routes
 })
 
-// 全局前置守卫：登录态 + 管理员权限
 router.beforeEach(async (to) => {
   const token = localStorage.getItem('used_car_token')
   const userStr = localStorage.getItem('used_car_user')
   let user = null
   try { user = userStr ? JSON.parse(userStr) : null } catch (e) { user = null }
 
-  // 公开页（登录页）放行
   if (to.meta.public) {
     return token ? '/dashboard' : true
   }
 
-  // 未登录 → 登录页
   if (!token || !user) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
 
-  // 管理员专属页校验
   if (to.meta.adminOnly && !user.is_staff) {
     return '/dashboard'
   }

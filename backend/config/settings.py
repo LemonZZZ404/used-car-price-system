@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'car_api.enhancements.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -83,6 +84,8 @@ DATABASES = {
         'PASSWORD': os.getenv('MYSQL_PASSWORD', '123456'),
         'HOST': os.getenv('MYSQL_HOST', 'localhost'),
         'PORT': os.getenv('MYSQL_PORT', '3306'),
+        # 持久化连接：避免每个请求重新建立 MySQL 连接（配合 gthread 多线程工作模式）
+        'CONN_MAX_AGE': 60,
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",

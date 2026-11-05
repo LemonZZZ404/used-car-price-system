@@ -59,8 +59,11 @@ class PredictionRequestSerializer(serializers.Serializer):
     city = serializers.CharField(max_length=64, required=False, default='北京', help_text='所在城市')
     original_price = serializers.FloatField(min_value=0, max_value=500, required=False, default=15.0,
                                               help_text='新车指导价（万元）')
-    model_type = serializers.ChoiceField(choices=['sklearn', 'spark_mllib'], required=False, default='sklearn',
-                                           help_text='预测模型类型')
+    model_type = serializers.ChoiceField(
+        choices=['sklearn', 'spark_mllib', 'lightgbm', 'xgboost'],
+        required=False, default='sklearn',
+        help_text='预测模型类型：sklearn随机森林 / lightgbm梯度提升 / xgboost梯度提升 / spark_mllib'
+    )
 
     def validate_age(self, value):
         if value < 0 or value > 30:

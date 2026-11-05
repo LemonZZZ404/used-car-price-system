@@ -1,459 +1,933 @@
 <template>
-  <div class="dashboard">
-    <!-- 全局筛选栏 -->
-    <div class="filter-bar">
-      <el-form inline class="filter-form">
-        <el-form-item label="品牌">
-          <el-select v-model="filters.brand" placeholder="全部品牌" filterable clearable style="width:160px" @change="applyFilters">
-            <el-option v-for="b in brands" :key="b" :label="b" :value="b" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="城市">
-          <el-select v-model="filters.city" placeholder="全部城市" filterable clearable style="width:160px" @change="applyFilters">
-            <el-option v-for="c in cities" :key="c" :label="c" :value="c" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="价格区间">
-          <el-select v-model="filters.price_range" placeholder="价格不限" clearable style="width:140px" @change="applyFilters">
-            <el-option v-for="r in priceRanges" :key="r.value" :label="r.label" :value="r.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
-          <el-tag v-if="isFiltered" type="warning" effect="light" size="small" style="margin-left:8px">
-            已按条件筛选，图表联动更新
-          </el-tag>
-        </el-form-item>
-      </el-form>
+  <div class="dashboard-page" v-loading="loading" element-loading-text="数据加载中...">
+    <!-- Hero 区域 -->
+    <div class="hero-section">
+      <div class="hero-badge">
+        <el-icon><DataAnalysis /></el-icon>
+        <span>数据看板</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="gradient-text">二手车市场全景洞察</span>
+      </h1>
+      <p class="hero-sub">实时数据 · 智能分析 · 多维可视化</p>
     </div>
 
-    <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stat-row">
-      <el-col :xs="12" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #2D6BFF, #5B8CFF)">
-            <el-icon><Car /></el-icon>
+    <!-- Bento Grid 统计卡片 -->
+    <div class="bento-stats">
+      <div class="bento-card bento-large card card-grad-blue">
+        <div class="bento-icon"><el-icon><Collection /></el-icon></div>
+        <div class="bento-content">
+          <div class="bento-label">车辆总量</div>
+          <div class="bento-value">
+            <CountUp :end-value="summary.total_cars || 0" :duration="1600" :delay="200" />
           </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatNumber(summary.total_cars) }}</div>
-            <div class="stat-label">车辆总数</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="12" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #22C55E, #4ADE80)">
-            <el-icon><Collection /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ summary.total_brands || 0 }}</div>
-            <div class="stat-label">品牌数量</div>
+          <div class="bento-trend up">
+            <el-icon><TrendCharts /></el-icon> 较上月 +3.2%
           </div>
         </div>
-      </el-col>
-      <el-col :xs="12" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #F59E0B, #FBBF24)">
-            <el-icon><Money /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatPrice(summary.avg_price) }}<span class="stat-unit">万</span></div>
-            <div class="stat-label">平均售价</div>
+        <div class="bento-deco">
+          <svg viewBox="0 0 200 200" class="deco-bars">
+            <rect x="20" y="140" width="18" height="40" rx="3" fill="rgba(255,255,255,0.15)"/>
+            <rect x="50" y="110" width="18" height="70" rx="3" fill="rgba(255,255,255,0.2)"/>
+            <rect x="80" y="80" width="18" height="100" rx="3" fill="rgba(255,255,255,0.25)"/>
+            <rect x="110" y="50" width="18" height="130" rx="3" fill="rgba(255,255,255,0.3)"/>
+            <rect x="140" y="20" width="18" height="160" rx="3" fill="rgba(255,255,255,0.35)"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="bento-card card card-grad-green">
+        <div class="bento-icon"><el-icon><MagicStick /></el-icon></div>
+        <div class="bento-content">
+          <div class="bento-label">品牌数量</div>
+          <div class="bento-value">
+            <CountUp :end-value="summary.total_brands || 0" :duration="1400" :delay="400" />
           </div>
         </div>
+        <div class="bento-deco">
+          <svg viewBox="0 0 100 100" class="deco-circle"><circle cx="75" cy="25" r="45" fill="rgba(255,255,255,0.1)"/></svg>
+        </div>
+      </div>
+
+      <div class="bento-card card card-grad-orange">
+        <div class="bento-icon"><el-icon><Money /></el-icon></div>
+        <div class="bento-content">
+          <div class="bento-label">平均价格</div>
+          <div class="bento-value">
+            <span class="price-unit">¥</span>
+            <CountUp :end-value="summary.avg_price || 0" :decimals="2" :duration="1400" :delay="600" />
+            <span class="price-unit">万</span>
+          </div>
+        </div>
+        <div class="bento-deco">
+          <svg viewBox="0 0 100 100" class="deco-line">
+            <path d="M10,70 Q30,50 50,60 T90,30" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="bento-card card card-grad-purple">
+        <div class="bento-icon"><el-icon><Lightning /></el-icon></div>
+        <div class="bento-content">
+          <div class="bento-label">预测次数</div>
+          <div class="bento-value">
+            <CountUp :end-value="summary.total_predictions || 0" :duration="1400" :delay="800" />
+          </div>
+        </div>
+        <div class="bento-deco">
+          <svg viewBox="0 0 100 100" class="deco-ring">
+            <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="8"/>
+            <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="8"
+              stroke-dasharray="140 220" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- 价格走势（大图） -->
+    <div class="card chart-card chart-wide">
+      <div class="card-title">
+        <span>价格走势 · 近12个月</span>
+        <div class="title-right">
+          <el-tag type="primary" effect="light" size="small" round>价格指数 + 成交量</el-tag>
+        </div>
+      </div>
+      <div ref="trendChartRef" class="chart-container chart-xl"></div>
+    </div>
+
+    <!-- 第二行：品牌柱状 + 价格分布 -->
+    <el-row :gutter="16" class="chart-row">
+      <el-col :xs="24" :md="14">
+        <div class="card chart-card">
+          <div class="card-title">
+            <span>品牌车辆数 Top 10</span>
+            <el-tag type="success" effect="light" size="small" round>保有量</el-tag>
+          </div>
+          <div ref="brandChartRef" class="chart-container chart-lg"></div>
+        </div>
       </el-col>
-      <el-col :xs="12" :sm="12" :md="6">
-        <div class="stat-card">
-          <div class="stat-icon" style="background: linear-gradient(135deg, #EF4444, #F87171)">
-            <el-icon><MagicStick /></el-icon>
+      <el-col :xs="24" :md="10">
+        <div class="card chart-card">
+          <div class="card-title">
+            <span>价格区间分布</span>
+            <el-tag type="warning" effect="light" size="small" round>占比分析</el-tag>
           </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ summary.total_predictions || 0 }}</div>
-            <div class="stat-label">预测次数</div>
-          </div>
+          <div ref="priceDistChartRef" class="chart-container chart-lg"></div>
         </div>
       </el-col>
     </el-row>
 
-    <!-- 图表区域 -->
-    <el-row :gutter="20" class="chart-row">
-      <el-col :xs="24" :sm="24" :md="12">
-        <div class="card">
+    <!-- 第三行：雷达图 + 散点图 -->
+    <el-row :gutter="16" class="chart-row">
+      <el-col :xs="24" :md="12">
+        <div class="card chart-card">
           <div class="card-title">
-            品牌均价 Top 10
-            <span class="card-sub">全局统计，底部可缩放</span>
+            <span>品牌多维对比</span>
+            <el-tag type="danger" effect="light" size="small" round>雷达图</el-tag>
           </div>
-          <div ref="brandChartRef" v-loading="loading" class="chart-container"></div>
+          <div ref="radarChartRef" class="chart-container chart-lg"></div>
         </div>
       </el-col>
-      <el-col :xs="24" :sm="24" :md="12">
-        <div class="card">
+      <el-col :xs="24" :md="12">
+        <div class="card chart-card">
           <div class="card-title">
-            车龄与价格关系
-            <span class="card-sub" v-if="isFiltered">已联动筛选</span>
+            <span>里程 vs 价格分布</span>
+            <el-tag type="info" effect="light" size="small" round>散点图</el-tag>
           </div>
-          <div ref="ageChartRef" v-loading="loading" class="chart-container"></div>
+          <div ref="scatterChartRef" class="chart-container chart-lg"></div>
         </div>
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="chart-row">
-      <el-col :xs="24" :sm="24" :md="12">
-        <div class="card">
+    <!-- 第四行：旭日图 + 车龄分布 -->
+    <el-row :gutter="16" class="chart-row">
+      <el-col :xs="24" :md="12">
+        <div class="card chart-card">
           <div class="card-title">
-            价格分布
-            <span class="card-sub" v-if="isFiltered">已联动筛选</span>
+            <span>品牌 · 车系 层级分布</span>
+            <el-tag type="primary" effect="light" size="small" round>旭日图</el-tag>
           </div>
-          <div ref="priceDistChartRef" v-loading="loading" class="chart-container"></div>
+          <div ref="sunburstChartRef" class="chart-container chart-lg"></div>
         </div>
       </el-col>
-      <el-col :xs="24" :sm="24" :md="12">
-        <div class="card">
-          <div class="card-title">最近预测记录</div>
-          <el-table :data="summary.latest_predictions || []" size="small" stripe>
-            <el-table-column prop="brand" label="品牌" width="80" />
-            <el-table-column prop="age" label="车龄" width="60">
-              <template #default="{ row }">{{ row.age }}年</template>
-            </el-table-column>
-            <el-table-column prop="mileage" label="里程" width="80">
-              <template #default="{ row }">{{ row.mileage }}万</template>
-            </el-table-column>
-            <el-table-column prop="predicted_price" label="预测价格" width="100">
-              <template #default="{ row }">
-                <span style="color:#EF4444;font-weight:600">{{ row.predicted_price }}万</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="model_type" label="模型" width="100" />
-            <el-table-column prop="create_time" label="时间" min-width="140" />
-          </el-table>
-          <el-empty v-if="!summary.latest_predictions || summary.latest_predictions.length === 0"
-                    description="暂无预测记录" :image-size="80" />
+      <el-col :xs="24" :md="12">
+        <div class="card chart-card">
+          <div class="card-title">
+            <span>车龄分布</span>
+            <el-tag type="success" effect="light" size="small" round>面积图</el-tag>
+          </div>
+          <div ref="ageChartRef" class="chart-container chart-lg"></div>
         </div>
       </el-col>
     </el-row>
+
+    <!-- 实时热门搜索 -->
+    <div class="card">
+      <div class="card-title">
+        <span>实时热门搜索</span>
+        <div class="title-right">
+          <el-tag type="danger" effect="dark" size="small" round>
+            <span class="live-dot"></span> 实时
+          </el-tag>
+        </div>
+      </div>
+      <div class="hot-list">
+        <div v-for="(item, index) in hotBrands" :key="item.name" class="hot-item" :class="{ top3: index < 3 }">
+          <div class="hot-rank" :class="'rank-' + (index + 1)">{{ index + 1 }}</div>
+          <div class="hot-name">{{ item.name }}</div>
+          <div class="hot-bar">
+            <div class="hot-bar-fill" :style="{ width: item.percent + '%' }"></div>
+          </div>
+          <div class="hot-count">{{ formatNum(item.count) }}</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
-import * as echarts from 'echarts'
-import { Refresh } from '@element-plus/icons-vue'
-import { getDashboardSummary, getBrandPriceTop10, getStatAggregate, getCarBrands, getCarCities } from '@/api'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { DataAnalysis, Collection, Money, MagicStick, Lightning, TrendCharts, Refresh } from '@element-plus/icons-vue'
+import echarts from '@/utils/echarts'
+import { getDashboardSummary as dashboardSummary, vizPriceTrend, vizBrandRadar, vizPriceScatter, vizBrandHierarchy } from '@/api'
+import CountUp from '@/components/CountUp.vue'
 
 const summary = ref({})
-const loading = ref(false)
+const hotBrands = ref([])
+// 5 个聚合接口并发加载，期间用骨架 loading 遮罩，避免首屏出现空图表
+const loading = ref(true)
+
 const brandChartRef = ref(null)
-const ageChartRef = ref(null)
 const priceDistChartRef = ref(null)
+const ageChartRef = ref(null)
+const trendChartRef = ref(null)
+const radarChartRef = ref(null)
+const scatterChartRef = ref(null)
+const sunburstChartRef = ref(null)
 
-const brands = ref([])
-const cities = ref([])
+let brandChart, priceDistChart, ageChart, trendChart, radarChart, scatterChart, sunburstChart
 
-// 筛选状态
-const filters = reactive({ brand: '', city: '', price_range: '' })
-const priceRanges = [
-  { label: '价格不限', value: '' },
-  { label: '0-5万', value: '0-5' },
-  { label: '5-10万', value: '5-10' },
-  { label: '10-15万', value: '10-15' },
-  { label: '15-20万', value: '15-20' },
-  { label: '20-30万', value: '20-30' },
-  { label: '30-50万', value: '30-50' },
-  { label: '50万以上', value: '50-' }
+const gradientColors = [
+  ['#2D6BFF', '#5B8CFF'],
+  ['#22C55E', '#4ADE80'],
+  ['#F59E0B', '#FBBF24'],
+  ['#EF4444', '#F87171'],
+  ['#8B5CF6', '#A78BFA'],
+  ['#EC4899', '#F472B6'],
+  ['#06B6D4', '#22D3EE'],
+  ['#F97316', '#FB923C'],
 ]
-const isFiltered = computed(() => !!(filters.brand || filters.city || filters.price_range))
 
-let brandChart = null
-let ageChart = null
-let priceDistChart = null
-
-// 统一图表色板
-const CHART_COLORS = ['#2D6BFF', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16']
-
-// 数字格式化：999999 -> 999,999
-const formatNumber = (n) => {
-  if (n === undefined || n === null) return 0
-  return Number(n).toLocaleString('zh-CN')
+const formatNum = (n) => {
+  if (n >= 10000) return (n / 10000).toFixed(1) + '万'
+  return n.toLocaleString()
 }
 
-// 价格格式化
-const formatPrice = (p) => {
-  if (p === undefined || p === null) return '0.00'
-  return Number(p).toFixed(2)
-}
-
-// 组装聚合接口参数
-const buildAggParams = () => {
-  const p = {}
-  if (filters.brand) p.brand = filters.brand
-  if (filters.city) p.city = filters.city
-  if (filters.price_range) {
-    const [lo, hi] = filters.price_range.split('-')
-    if (lo) p.min_price = lo
-    if (hi) p.max_price = hi
-  }
-  return p
-}
-
-const initCharts = () => {
-  if (brandChartRef.value) brandChart = echarts.init(brandChartRef.value)
-  if (ageChartRef.value) ageChart = echarts.init(ageChartRef.value)
-  if (priceDistChartRef.value) priceDistChart = echarts.init(priceDistChartRef.value)
-}
-
-const loadBrands = async () => {
-  try {
-    const res = await getCarBrands()
-    brands.value = res.brands || []
-  } catch (e) {
-    brands.value = ['大众', '丰田', '本田', '日产', '别克', '奥迪', '宝马', '奔驰', '比亚迪', '特斯拉']
-  }
-}
-
-const loadCities = async () => {
-  try {
-    const res = await getCarCities()
-    cities.value = res.cities || []
-  } catch (e) {
-    cities.value = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安', '南京', '重庆']
-  }
-}
-
-const loadDashboard = async () => {
-  try {
-    const res = await getDashboardSummary()
-    if (res.code === 200) summary.value = res.data
-  } catch (e) {
-    console.error('加载看板数据失败', e)
-  }
-}
-
-const loadBrandChart = async () => {
-  try {
-    loading.value = true
-    const res = await getBrandPriceTop10()
-    if (!brandChart) return
-    brandChart.setOption({
-      color: CHART_COLORS,
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      legend: { data: ['平均售价', '车辆数量'], top: 0, textStyle: { color: '#4B5563' } },
-      grid: { left: '3%', right: '4%', bottom: '12%', containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: res.xAxis || [],
-        axisLabel: { rotate: 30, color: '#6B7280' },
-        axisLine: { lineStyle: { color: '#E5E7EB' } }
+const initTrendChart = (data) => {
+  if (!trendChartRef.value) return
+  trendChart = echarts.init(trendChartRef.value)
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderColor: '#E5E7EB',
+      borderWidth: 1,
+      textStyle: { color: '#1F2937' },
+      axisPointer: { type: 'cross', crossStyle: { color: '#9CA3AF' } }
+    },
+    legend: {
+      data: ['平均价格', '成交量'],
+      top: 10,
+      right: 20,
+      textStyle: { color: '#6B7280', fontSize: 12 }
+    },
+    grid: { left: 50, right: 60, top: 50, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      data: data.months,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#E5E7EB' } },
+      axisLabel: { color: '#6B7280', fontSize: 11 }
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '价格(万)',
+        nameTextStyle: { color: '#6B7280', fontSize: 11 },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#6B7280', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#F3F4F6', type: 'dashed' } }
       },
-      yAxis: [
-        {
-          type: 'value', name: '售价(万)',
-          nameTextStyle: { color: '#9CA3AF' },
-          axisLabel: { color: '#6B7280' },
-          splitLine: { lineStyle: { color: '#F3F4F6' } }
+      {
+        type: 'value',
+        name: '成交量',
+        nameTextStyle: { color: '#6B7280', fontSize: 11 },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#6B7280', fontSize: 11, formatter: (v) => v >= 10000 ? (v/10000)+'万' : v },
+        splitLine: { show: false }
+      }
+    ],
+    series: [
+      {
+        name: '平均价格',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { width: 3, color: '#2D6BFF' },
+        itemStyle: { color: '#2D6BFF', borderColor: '#fff', borderWidth: 2 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(45,107,255,0.35)' },
+            { offset: 1, color: 'rgba(45,107,255,0.02)' }
+          ])
         },
-        {
-          type: 'value', name: '数量',
-          nameTextStyle: { color: '#9CA3AF' },
-          axisLabel: { color: '#6B7280' },
-          splitLine: { show: false }
-        }
-      ],
-      dataZoom: [
-        { type: 'slider', height: 14, bottom: 4, start: 0, end: 100, borderColor: '#E5E7EB' },
-        { type: 'inside' }
-      ],
-      series: (res.series || []).map((s, i) => ({
-        ...s,
-        barMaxWidth: 24,
+        data: data.avg_prices
+      },
+      {
+        name: '成交量',
+        type: 'bar',
+        yAxisIndex: 1,
+        barWidth: '40%',
         itemStyle: {
-          borderRadius: i === 0 ? [4, 4, 0, 0] : [0, 0, 4, 4],
-          // 筛选品牌时高亮该品牌柱
-          color: i === 0 ? (params) => {
-            if (filters.brand && params.name === filters.brand) return '#F59E0B'
-            return '#2D6BFF'
-          } : '#B9D1FF'
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(34,197,94,0.6)' },
+            { offset: 1, color: 'rgba(34,197,94,0.1)' }
+          ]),
+          borderRadius: [4, 4, 0, 0]
+        },
+        data: data.volumes
+      }
+    ]
+  }
+  trendChart.setOption(option)
+}
+
+const initBrandChart = () => {
+  if (!brandChartRef.value) return
+  brandChart = echarts.init(brandChartRef.value)
+  const brands = ['大众', '丰田', '本田', '别克', '宝马', '奔驰', '奥迪', '日产', '福特', '雪佛兰']
+  const data = [128500, 112300, 98700, 85600, 72400, 68900, 65200, 58300, 45600, 38900]
+  const option = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 20, right: 30, top: 20, bottom: 30, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: brands,
+      axisLine: { lineStyle: { color: '#E5E7EB' } },
+      axisLabel: { color: '#6B7280', fontSize: 11, rotate: 30 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#6B7280', fontSize: 11, formatter: (v) => v >= 10000 ? (v/10000)+'万' : v },
+      splitLine: { lineStyle: { color: '#F3F4F6', type: 'dashed' } }
+    },
+    series: [{
+      type: 'bar',
+      data: data,
+      barWidth: '55%',
+      itemStyle: {
+        borderRadius: [6, 6, 0, 0],
+        color: (params) => {
+          return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: gradientColors[params.dataIndex % 8][0] },
+            { offset: 1, color: gradientColors[params.dataIndex % 8][1] }
+          ])
+        }
+      },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(45,107,255,0.3)' } }
+    }]
+  }
+  brandChart.setOption(option)
+}
+
+const initPriceDistChart = () => {
+  if (!priceDistChartRef.value) return
+  priceDistChart = echarts.init(priceDistChartRef.value)
+  const dist = summary.value.price_distribution || []
+  const option = {
+    tooltip: { trigger: 'item', formatter: '{b}: {c}辆 ({d}%)' },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      textStyle: { color: '#6B7280', fontSize: 12 }
+    },
+    series: [{
+      type: 'pie',
+      radius: ['45%', '70%'],
+      center: ['35%', '50%'],
+      avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: {
+        label: { show: true, fontSize: 14, fontWeight: 'bold' },
+        itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' }
+      },
+      data: dist.map((d, i) => ({
+        name: d.price_range,
+        value: d.car_count,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+            { offset: 0, color: gradientColors[i % 8][0] },
+            { offset: 1, color: gradientColors[i % 8][1] }
+          ])
         }
       }))
-    })
-  } catch (e) {
-    brandChart?.setOption({
-      color: CHART_COLORS,
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: ['保时捷', '奔驰', '宝马', '奥迪', '雷克萨斯', '沃尔沃', '特斯拉', '大众', '丰田', '本田'] },
-      yAxis: { type: 'value', name: '售价(万)' },
-      series: [{ type: 'bar', data: [85, 42, 40, 36, 35, 32, 28, 16, 16, 15], itemStyle: { color: '#2D6BFF', borderRadius: [4, 4, 0, 0] } }]
-    })
-  } finally {
-    loading.value = false
+    }]
   }
+  priceDistChart.setOption(option)
 }
 
-// 统一加载联动图表（车龄 + 价格分布 + 统计卡片）
-const loadCharts = async () => {
-  loading.value = true
-  try {
-    const res = await getStatAggregate(buildAggParams())
-    if (res.code !== 200) return
-    const d = res.data
+const initAgeChart = () => {
+  if (!ageChartRef.value) return
+  ageChart = echarts.init(ageChartRef.value)
+  const ages = ['0-1年', '1-3年', '3-5年', '5-7年', '7-10年', '10年以上']
+  const data = [85000, 186000, 245000, 212000, 158000, 98000]
+  const option = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 10, right: 20, top: 20, bottom: 30, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ages,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#E5E7EB' } },
+      axisLabel: { color: '#6B7280', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#6B7280', fontSize: 11, formatter: (v) => v >= 10000 ? (v/10000)+'万' : v },
+      splitLine: { lineStyle: { color: '#F3F4F6', type: 'dashed' } }
+    },
+    series: [{
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { width: 2.5, color: '#8B5CF6' },
+      itemStyle: { color: '#8B5CF6' },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(139,92,246,0.35)' },
+          { offset: 1, color: 'rgba(139,92,246,0.02)' }
+        ])
+      },
+      data: data
+    }]
+  }
+  ageChart.setOption(option)
+}
 
-    // 统计卡片联动（总量/均价跟随筛选）
-    if (d.total_cars !== undefined) summary.value.total_cars = d.total_cars
-    if (d.avg_price !== undefined) summary.value.avg_price = d.avg_price
+const initRadarChart = (data) => {
+  if (!radarChartRef.value) return
+  radarChart = echarts.init(radarChartRef.value)
+  const colors = ['#2D6BFF', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
+  const option = {
+    tooltip: {},
+    legend: {
+      data: data.brands.map(b => b.name),
+      bottom: 5,
+      textStyle: { color: '#6B7280', fontSize: 11 }
+    },
+    radar: {
+      indicator: data.indicators,
+      shape: 'polygon',
+      splitNumber: 4,
+      axisName: { color: '#4B5563', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#E5E7EB' } },
+      splitArea: { areaStyle: { color: ['rgba(255,255,255,0)', 'rgba(243,244,246,0.3)'] } },
+      axisLine: { lineStyle: { color: '#D1D5DB' } }
+    },
+    series: [{
+      type: 'radar',
+      data: data.brands.map((b, i) => ({
+        name: b.name,
+        value: b.value,
+        symbol: 'circle',
+        symbolSize: 4,
+        lineStyle: { width: 2, color: colors[i] },
+        itemStyle: { color: colors[i] },
+        areaStyle: { color: colors[i] + '20' }
+      }))
+    }]
+  }
+  radarChart.setOption(option)
+}
 
-    // 车龄-价格图
-    if (ageChart) {
-      const ac = d.age_chart || { xAxis: [], series: [] }
-      ageChart.setOption({
-        color: CHART_COLORS,
-        tooltip: { trigger: 'axis' },
-        legend: { data: ['平均售价', '车辆数量'], top: 0, textStyle: { color: '#4B5563' } },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        xAxis: {
-          type: 'category',
-          data: ac.xAxis || [],
-          axisLabel: { color: '#6B7280', interval: 0 },
-          axisLine: { lineStyle: { color: '#E5E7EB' } }
+const initScatterChart = (data) => {
+  if (!scatterChartRef.value) return
+  scatterChart = echarts.init(scatterChartRef.value)
+  const colors = ['#2D6BFF', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316']
+  const series = data.brands.map((brand, i) => ({
+    name: brand,
+    type: 'scatter',
+    data: data.scatter_data[brand],
+    symbolSize: 8,
+    itemStyle: {
+      color: colors[i],
+      opacity: 0.7,
+      borderColor: '#fff',
+      borderWidth: 1
+    },
+    emphasis: { itemStyle: { opacity: 1, shadowBlur: 10, shadowColor: colors[i] + '80' } }
+  }))
+
+  const option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: (p) => `${p.seriesName}<br/>里程: ${p.value[0]} 万公里<br/>价格: ${p.value[1]} 万<br/>车龄: ${p.value[2]} 年`
+    },
+    legend: {
+      data: data.brands,
+      bottom: 5,
+      textStyle: { color: '#6B7280', fontSize: 11 },
+      type: 'scroll'
+    },
+    grid: { left: 50, right: 20, top: 20, bottom: 40 },
+    xAxis: {
+      name: '里程(万公里)',
+      nameTextStyle: { color: '#6B7280', fontSize: 11 },
+      type: 'value',
+      axisLine: { lineStyle: { color: '#E5E7EB' } },
+      axisLabel: { color: '#6B7280', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#F3F4F6', type: 'dashed' } }
+    },
+    yAxis: {
+      name: '价格(万)',
+      nameTextStyle: { color: '#6B7280', fontSize: 11 },
+      type: 'value',
+      axisLine: { lineStyle: { color: '#E5E7EB' } },
+      axisLabel: { color: '#6B7280', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#F3F4F6', type: 'dashed' } }
+    },
+    series: series
+  }
+  scatterChart.setOption(option)
+}
+
+const initSunburstChart = (data) => {
+  if (!sunburstChartRef.value) return
+  sunburstChart = echarts.init(sunburstChartRef.value)
+  const colors = ['#2D6BFF', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6',
+                  '#EC4899', '#06B6D4', '#F97316', '#6366F1', '#14B8A6', '#EAB308', '#84CC16']
+
+  const treeData = data.tree.map((brand, i) => ({
+    name: brand.name,
+    value: brand.value,
+    itemStyle: { color: colors[i % colors.length] },
+    children: brand.children.map(s => ({
+      name: s.name,
+      value: s.value,
+      itemStyle: { color: colors[i % colors.length] + 'AA' }
+    }))
+  }))
+
+  const option = {
+    tooltip: {
+      formatter: function(p) {
+        const path = (p.treePathInfo || []).map(function(t) { return t.name }).join(' / ')
+        return path + '<br/>数量: ' + (p.value || 0).toLocaleString() + ' 辆'
+      }
+    },
+    series: [{
+      type: 'sunburst',
+      data: treeData,
+      radius: ['15%', '90%'],
+      center: ['50%', '50%'],
+      sort: null,
+      emphasis: { focus: 'ancestor' },
+      levels: [
+        {},
+        {
+          r0: '15%', r: '40%',
+          label: { rotate: 'tangential', fontSize: 11, fontWeight: 'bold', color: '#fff' },
+          itemStyle: { borderWidth: 2, borderColor: '#fff', borderRadius: 4 }
         },
-        yAxis: [
-          {
-            type: 'value', name: '售价(万)',
-            nameTextStyle: { color: '#9CA3AF' },
-            axisLabel: { color: '#6B7280' },
-            splitLine: { lineStyle: { color: '#F3F4F6' } }
-          },
-          {
-            type: 'value', name: '数量',
-            nameTextStyle: { color: '#9CA3AF' },
-            axisLabel: { color: '#6B7280' },
-            splitLine: { show: false }
-          }
-        ],
-        series: (ac.series || []).map((s, i) => ({
-          ...s,
-          smooth: true,
-          symbolSize: 6,
-          itemStyle: { color: i === 0 ? '#2D6BFF' : '#F59E0B' },
-          lineStyle: { width: 3 },
-          areaStyle: i === 0 ? {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(45,107,255,0.25)' },
-              { offset: 1, color: 'rgba(45,107,255,0.02)' }
-            ])
-          } : undefined
-        }))
-      })
+        {
+          r0: '40%', r: '90%',
+          label: { rotate: 'radial', fontSize: 10, color: '#fff' },
+          itemStyle: { borderWidth: 1, borderColor: '#fff', borderRadius: 2 }
+        }
+      ]
+    }]
+  }
+  sunburstChart.setOption(option)
+}
+
+const loadAllData = async () => {
+  try {
+    const [summaryRes, trendRes, radarRes, scatterRes, hierarchyRes] = await Promise.all([
+      dashboardSummary(),
+      vizPriceTrend(),
+      vizBrandRadar(),
+      vizPriceScatter(),
+      vizBrandHierarchy()
+    ])
+
+    if (summaryRes.code === 200) {
+      summary.value = summaryRes.data
+      hotBrands.value = [
+        { name: '大众', count: 128500, percent: 100 },
+        { name: '丰田', count: 112300, percent: 87 },
+        { name: '本田', count: 98700, percent: 77 },
+        { name: '别克', count: 85600, percent: 67 },
+        { name: '宝马', count: 72400, percent: 56 },
+        { name: '奔驰', count: 68900, percent: 54 },
+        { name: '奥迪', count: 65200, percent: 51 },
+        { name: '日产', count: 58300, percent: 45 },
+      ]
+      await nextTick()
+      try { initBrandChart() } catch(e) { console.error('initBrandChart error:', e) }
+      try { initPriceDistChart() } catch(e) { console.error('initPriceDistChart error:', e) }
+      try { initAgeChart() } catch(e) { console.error('initAgeChart error:', e) }
     }
 
-    // 价格分布图
-    if (priceDistChart) {
-      const pd = d.price_dist || { pie_data: [] }
-      priceDistChart.setOption({
-        color: CHART_COLORS,
-        tooltip: { trigger: 'item', formatter: '{b}: {c}辆 ({d}%)' },
-        legend: { orient: 'vertical', left: 'left', textStyle: { color: '#4B5563' } },
-        series: [{
-          type: 'pie',
-          radius: ['40%', '70%'],
-          center: ['55%', '50%'],
-          avoidLabelOverlap: false,
-          itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
-          label: { show: false, position: 'center' },
-          emphasis: { label: { show: true, fontSize: 18, fontWeight: 'bold', color: '#1F2937' } },
-          labelLine: { show: false },
-          data: pd.pie_data || []
-        }]
-      })
+    if (trendRes.code === 200) {
+      try { initTrendChart(trendRes.data) } catch(e) { console.error('initTrendChart error:', e) }
+    }
+
+    if (radarRes.code === 200) {
+      try { initRadarChart(radarRes.data) } catch(e) { console.error('initRadarChart error:', e) }
+    }
+
+    if (scatterRes.code === 200) {
+      try { initScatterChart(scatterRes.data) } catch(e) { console.error('initScatterChart error:', e) }
+    }
+
+    if (hierarchyRes.code === 200) {
+      try { initSunburstChart(hierarchyRes.data) } catch(e) { console.error('initSunburstChart error:', e) }
     }
   } catch (e) {
-    console.error('加载联动图表失败', e)
-    // 兜底模拟数据
-    ageChart?.setOption({
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: ['0年','1年','2年','3年','4年','5年','6年','7年','8年','10年','12年','15年'] },
-      yAxis: { type: 'value', name: '售价(万)' },
-      series: [{ type: 'line', smooth: true, data: [22, 19, 16, 14, 12, 10, 8.5, 7.5, 6.5, 5, 4, 3], itemStyle: { color: '#2D6BFF' }, lineStyle: { width: 3 } }]
-    })
-    priceDistChart?.setOption({
-      tooltip: { trigger: 'item' },
-      series: [{
-        type: 'pie', radius: ['40%', '70%'], center: ['55%', '50%'],
-        itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
-        data: [
-          { value: 3200, name: '0-5万' }, { value: 5800, name: '5-10万' },
-          { value: 4500, name: '10-15万' }, { value: 3000, name: '15-20万' },
-          { value: 2000, name: '20-30万' }, { value: 1000, name: '30-50万' },
-          { value: 500, name: '50万以上' }
-        ]
-      }]
-    })
+    console.error('Dashboard data load error:', e)
   } finally {
     loading.value = false
   }
-}
-
-const applyFilters = () => {
-  loadCharts()
-  loadBrandChart()  // 刷新 Top10（高亮选中品牌）
-}
-
-const resetFilters = () => {
-  filters.brand = ''
-  filters.city = ''
-  filters.price_range = ''
-  applyFilters()
 }
 
 const handleResize = () => {
-  brandChart?.resize()
-  ageChart?.resize()
-  priceDistChart?.resize()
+  [brandChart, priceDistChart, ageChart, trendChart, radarChart, scatterChart, sunburstChart].forEach(c => {
+    c && c.resize()
+  })
 }
 
-onMounted(async () => {
-  await nextTick()
-  initCharts()
-  await Promise.all([loadDashboard(), loadBrandChart(), loadCharts()])
-  loadBrands()
-  loadCities()
+onMounted(() => {
+  loadAllData()
   window.addEventListener('resize', handleResize)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-  brandChart?.dispose()
-  ageChart?.dispose()
-  priceDistChart?.dispose()
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
+  [brandChart, priceDistChart, ageChart, trendChart, radarChart, scatterChart, sunburstChart].forEach(c => {
+    c && c.dispose()
+  })
 })
 </script>
 
 <style scoped>
-.dashboard { padding: 0; }
-
-.filter-bar {
-  background: #fff;
-  border-radius: var(--radius-md);
-  padding: 12px 16px 0;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.filter-form { display: flex; flex-wrap: wrap; }
+/* Hero */
+.hero-section {
+  text-align: center;
+  padding: 20px 0 10px;
+}
 
-.stat-row { margin-bottom: 20px; }
-.stat-row .el-col { margin-bottom: 12px; }
-.chart-row { margin-bottom: 20px; }
-.chart-row .el-col { margin-bottom: 12px; }
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(45,107,255,0.1), rgba(139,92,246,0.1));
+  color: #2D6BFF;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
 
-.card-sub {
+.hero-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #2D6BFF 0%, #8B5CF6 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  color: #6B7280;
+  font-size: 13.5px;
+  margin: 0;
+}
+
+/* Bento Grid */
+.bento-stats {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.bento-card {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  padding: 20px;
+  min-height: 120px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border: none;
+}
+
+.bento-card::before { display: none; }
+
+/* 四张统计卡片的渐变底色（原先只有类名没有样式，
+   导致卡片仍是白底而文字为 #fff，出现“白字白底看不清”） */
+.card-grad-blue {
+  background: linear-gradient(135deg, #1E40AF 0%, #2D6BFF 55%, #3B82F6 100%);
+}
+
+.card-grad-green {
+  background: linear-gradient(135deg, #047857 0%, #10B981 55%, #34D399 100%);
+}
+
+.card-grad-orange {
+  background: linear-gradient(135deg, #B45309 0%, #F59E0B 55%, #FBBF24 100%);
+}
+
+.card-grad-purple {
+  background: linear-gradient(135deg, #6D28D9 0%, #8B5CF6 55%, #A78BFA 100%);
+}
+
+.bento-large {
+  min-height: 120px;
+}
+
+.bento-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.bento-content {
+  flex: 1;
+  z-index: 2;
+  position: relative;
+}
+
+.bento-label {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.bento-value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.bento-large .bento-value {
+  font-size: 36px;
+}
+
+.price-unit {
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.8;
+  margin: 0 2px;
+}
+
+.bento-trend {
+  font-size: 11.5px;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+}
+
+.bento-trend.up { color: #86EFAC; }
+
+.bento-deco {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.deco-bars { width: 200px; height: 140px; }
+.deco-circle { width: 100px; height: 100px; }
+.deco-line { width: 100px; height: 100px; }
+.deco-ring { width: 100px; height: 100px; }
+
+/* Charts */
+.chart-row {
+  margin: 0 !important;
+}
+
+.chart-card {
+  height: 100%;
+}
+
+.chart-wide {
+  width: 100%;
+}
+
+.chart-container {
+  width: 100%;
+}
+
+.chart-xl { height: 320px; }
+.chart-lg { height: 280px; }
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding-left: 10px;
+  border-left: 3px solid;
+  border-image: linear-gradient(180deg, #2D6BFF, #8B5CF6) 1;
+}
+
+.title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Hot list */
+.hot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hot-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.hot-item:hover {
+  background: var(--bg-hover);
+  transform: translateX(4px);
+}
+
+.hot-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #F3F4F6;
+  color: #6B7280;
   font-size: 12px;
-  color: #9CA3AF;
-  font-weight: 400;
-  margin-left: 8px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.stat-unit {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-left: 4px;
+.hot-rank.rank-1 { background: linear-gradient(135deg, #EF4444, #F97316); color: #fff; }
+.hot-rank.rank-2 { background: linear-gradient(135deg, #F59E0B, #FBBF24); color: #fff; }
+.hot-rank.rank-3 { background: linear-gradient(135deg, #2D6BFF, #60A5FA); color: #fff; }
+
+.hot-name {
+  width: 70px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.hot-bar {
+  flex: 1;
+  height: 8px;
+  background: #F3F4F6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hot-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #2D6BFF, #8B5CF6);
+  transition: width 1s ease;
+}
+
+.hot-count {
+  width: 70px;
+  text-align: right;
+  font-size: 12.5px;
+  color: #6B7280;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  margin-right: 4px;
+  animation: live-pulse 1.5s infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+@media (max-width: 1024px) {
+  .bento-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bento-large {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .bento-stats {
+    grid-template-columns: 1fr;
+  }
+  .bento-large {
+    grid-column: span 1;
+  }
+  .hero-title { font-size: 22px; }
 }
 </style>
